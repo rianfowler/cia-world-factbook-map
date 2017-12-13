@@ -11,23 +11,26 @@ import {
 } from 'redux';
 import promiseMiddleware from 'redux-promise-middleware';
 import {
-	countryReducer
-} from './features/country/country-reducer';
+	countriesReducer,
+	worldAction
+} from './features/countries/countries-reducer';
 import {
 	displaySizeUpdateAction,
 	countryLocationAction,
 	mapReducer
 } from './features/map/map-reducers';
 import {
-	countriesAction,
 	searchReducer
 } from './features/search/search-reducer';
+import {
+	detailsReducer
+} from './features/details/details-reducer';
 import thunk from 'redux-thunk';
 
-const reducer = combineReducers({country: countryReducer, map: mapReducer, search: searchReducer});
+const reducer = combineReducers({countries: countriesReducer, details: detailsReducer, map: mapReducer, search: searchReducer});
 
 const store = createStore(reducer, applyMiddleware(thunk, promiseMiddleware()));
-store.dispatch(countriesAction());
+store.dispatch(worldAction());
 
 ReactDOM.render(
 	<Provider store={store}>

@@ -4,11 +4,17 @@ import {
 	getCountryBackground,
 	getSelectedCountry
 } from '../countries/countries-reducer';
+import DetailsView from './details-view';
+import styles from './details.module.css';
 
 const mapStateToProps = state => {
-	return {
+	const props = {
 		background: getCountryBackground(state, getSelectedCountry(state))
 	}
+
+	props.showDetails = !!props.background;
+
+	return props;
 }
 
 const mapDispatchToProps = dispatch => {
@@ -18,10 +24,12 @@ const mapDispatchToProps = dispatch => {
 class DetailsContainer extends Component {
 	render() {
 		return (
-			<div className="details-container">
-				<ul>
-					<strong>Background:</strong> {this.props.background}
-				</ul>
+			<div className={styles.container}>
+				{this.props.showDetails ? (
+					<DetailsView
+						background={this.props.background}
+					></DetailsView>
+				) : (<ul></ul>)}
 			</div>
 		);
 	}

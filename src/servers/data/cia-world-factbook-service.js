@@ -1,6 +1,96 @@
 const http = require('http');
 const express = require('express');
 const worldData = require('./cia-world-factbook-data.json');
+const geometryData = require('./world-110m.json');
+const FuzzySet = require('fuzzyset.js');
+const { feature } = require('topojson-client')
+
+const worldFactbookCountries = Object.keys(worldData.countries).map((country) => country.replace(/_/g, " "));
+const worldFuzzy = FuzzySet(worldFactbookCountries);
+let countries = [];
+
+const geometryFeatures = feature(geometryData, geometryData.objects[Object.keys(geometryData.objects)[0]]).features;
+// const geometryDataCountries = geometryFeatures.map((feature) => feature.properties.NAME_LONG);
+// const geometryFuzzy = FuzzySet(geometryDataCountries);
+
+geometryFeatures.forEach((feature) => {
+	// console.log(`${feature.properties.NAME_LONG}: ${worldFuzzy.get(feature.properties.NAME_LONG)}`);
+	countries.push(feature.properties.NAME_LONG);
+	let key;
+	switch(feature.properties.NAME_LONG) {
+		case 'French Southern and Antarctic Lands':
+		case 'Northern Cyprus':
+		case 'Palestine':
+			key = 'none';
+			break;
+		case 'Czech Republic':
+			key = 'Czechia';
+			break;
+		case 'Falkland Islands':
+			key = 'falkand islands isla malvinas';
+			break;
+		case 'The Gambia':
+			key = 'gambia the';
+			break;
+		case 'Republic of Korea':
+			key = 'korea south';
+			break;
+		case 'Myanmar':
+			key = 'burma';
+			break;
+		case 'Dem. Rep. Korea':
+			key = 'korea north';
+			break;
+		case 'Russian Federation':
+			key = 'russia';
+			break;
+		default:
+			// feature.properties.CIA_NAME = worldFuzzy.get(feature.properties.NAME_LONG)[0][1];
+			key = worldFuzzy.get(feature.properties.NAME_LONG)[0][1];
+	}
+	if (key !== 'none') {
+		worldData[feature.properties.NAME_LONG] = 'none';
+	} else {
+		worldData[feature.properties.NAME_LONG] = worldData[key];
+		delete worldData[key];
+	}
+});
+
+// move to server side and calculate there
+function getMinMaxLatLong(coordinates) {
+	return coordinates.reduce((accumulator, next) => {
+		if (next.length !== 2) {
+			const { minLat, maxLat, minLong, maxLong } = getMinMaxLatLong(next);
+			return {
+				minLat: Math.min(minLat, accumulator.minLat),
+				maxLat: Math.max(maxLat, accumulator.maxLat),
+				minLong: Math.min(minLong, accumulator.minLong),
+				maxLong: Math.max(maxLong, accumulator.maxLong)
+			}
+		}
+		return {
+			minLat: Math.min(next[1], accumulator.minLat),
+			maxLat: Math.max(next[1], accumulator.maxLat),
+			minLong: Math.min(next[0], accumulator.minLong),
+			maxLong: Math.max(next[0], accumulator.maxLong)
+		}
+	}, {minLat: 90, maxLat: -90, minLong: 180, maxLong: -180});
+}
+
+function zoomTest(geography) {
+	const { minLat, maxLat, minLong, maxLong } = getMinMaxLatLong(geography.geometry.coordinates);
+
+	const testZoom = Math.min(180 / (maxLat - minLat), 360 / (maxLong - minLong));
+	const testCenter = [(maxLong - ((maxLong - minLong) /2)),(maxLat - ((maxLat - minLat) / 2))];
+
+	return { testZoom, testCenter };
+}
+
+function getCountryGeometry(countryName) {
+	const foundName = geometryFuzzy.get(countryName)[0][1];
+
+	return geometryFeatures.filter((feature) => feature.properties.NAME_LONG === foundName)[0].geometry.coordinates;
+}
 
 const app = express();
 
@@ -9,12 +99,32 @@ const dataRouter = express.Router();
 dataRouter.route('/countries.json')
 	.get(function (req, res) {
 		console.log('countries requested');
-		res.json(Object.keys(worldData.countries).map((country) => country.replace(/_/g, " ")));
+		res.json(worldFactbookCountries);
+		// res.json(Object.keys(worldData.countries).map((country) => country.replace(/_/g, " ")));
 	});
+
+dataRouter.route('/geometries.json')
+	.get((req, res) => res.json(geometryData));
+
+dataRouter.route('/world.json')
+	.get((req, res) => res.json({
+		countries: countries,
+		geometry: geometryData
+	}));
 
 dataRouter.route('/country/:name/details.json')
 	.get(function (req, res) {
 		console.log(req.params.name, ' requested');
+
+		const fuzzyResult = worldFuzzy.get(req.params.name);
+
+		if (fuzzyResult === null) {
+			res.json({});
+			return;
+		}
+
+		const fuzzyResultName = fuzzyResult[0][1].replace(/ /g, "_");
+
 		const {
 			data: {
 				introduction: {
@@ -27,17 +137,13 @@ dataRouter.route('/country/:name/details.json')
 					}
 				}
 			}
-		} = worldData.countries[req.params.name.replace(/ /g, "_")];
-		console.log(latitude, longitude);
-
-		const decimalLatitude = (latitude.degrees + (latitude.minutes / 60)) * (latitude.hemisphere === "N" ? 1 : -1);
-		const decimalLongitude = (longitude.degrees + (longitude.minutes / 60)) * (longitude.hemisphere === "E" ? 1 : -1);
-;
-		res.json({
+		} = worldData.countries[fuzzyResultName];
+		// } = worldData.countries[req.params.name.replace(/ /g, "_")];
+		;
+		setTimeout(() => res.json({
 			country: req.params.name,
-			location: [decimalLongitude, decimalLatitude],
 			background
-		});
+		}), 15);
 	});
 
 app.set('port', process.env.PORT || 3001);
@@ -48,25 +154,4 @@ http.createServer(app).listen(app.get('port'), function() {
 	console.log('Express server listening on port ' + app.get('port'));
 });
 
-/*
-		"china": {
-			"data": {
-				"name": "China",
-				"introduction": {
-					"background": "For centuries China stood as a leading civilization, outpacing the rest of the world in the arts and sciences, but in the 19th and early 20th centuries, the country was beset by civil unrest, major famines, military defeats, and foreign occupation. After World War II, the communists under MAO Zedong established an autocratic socialist system that, while ensuring China's sovereignty, imposed strict controls over everyday life and cost the lives of tens of millions of people. After 1978, MAO's successor DENG Xiaoping and other leaders focused on market-oriented economic development and by 2000 output had quadrupled. For much of the population, living standards have improved dramatically and the room for personal choice has expanded, yet political controls remain tight. Since the early 1990s, China has increased its global outreach and participation in international organizations."
-				},
-				"geography": {
-					"location": "Eastern Asia, bordering the East China Sea, Korea Bay, Yellow Sea, and South China Sea, between North Korea and Vietnam",
-					"geographic_coordinates": {
-						"latitude": {
-							"degrees": 35,
-							"minutes": 0,
-							"hemisphere": "N"
-						},
-						"longitude": {
-							"degrees": 105,
-							"minutes": 0,
-							"hemisphere": "E"
-						}
-					},
-					*/
+

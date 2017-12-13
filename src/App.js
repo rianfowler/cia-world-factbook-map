@@ -4,7 +4,7 @@ import './App.css';
 import { connect } from 'react-redux';
 import MapContainer from './features/map/map-container';
 import SearchContainer from './features/search/search-container';
-import CountryContainer from './features/country/country-container';
+import DetailsContainer from './features/details/details-container';
 
 const mapStateToProps = state => {
 	return {}
@@ -20,13 +20,12 @@ class App extends Component {
 			<div className="App">
 				<MapContainer></MapContainer>
 				<SearchContainer></SearchContainer>
-				<CountryContainer></CountryContainer>
+				<DetailsContainer></DetailsContainer>
 			</div>
 		);
 	}
 }
 
-/*
 (function () {
 	var old = console.log;
 	var logger = document.getElementById('log');
@@ -40,7 +39,6 @@ class App extends Component {
 		}
 	}
 })();
-*/
 
 const ConnectedApp = connect(
 	mapStateToProps,
