@@ -137,7 +137,7 @@ function getCountry(countryState, countryName) {
 export function getCountryCoordinateBounds(state, countryName) {
 	const country = getCountry(getCountriesState(state), countryName);
 
-	return _get(country, 'coordinateBounds', {});
+	return _get(country, 'coordinateBounds', {minLat: -90, maxLat: 90, minLong: -180, maxLong: 180});
 }
 
 export function getCountryBackground(state, countryName) {

@@ -3,49 +3,73 @@ import { connect } from 'react-redux';
 import MapView from './map-view';
 import {
 	countrySelectionAction,
-	getCountryCoordinateBounds,
 	getSelectedCountry,
 	getWorldGeometry
 } from '../countries/countries-reducer';
+import {
+	centerChange,
+	getMapCenterLat,
+	getMapCenterLong,
+	getMapZoom,
+	zoomInAction,
+	zoomOutAction
+} from './map-reducers';
+import ZingTouch from 'zingtouch';
 
 // max zoom is 20% map size
-const maxZoom = 6;
 const mapStateToProps = state => {
 	const selectedCountry = getSelectedCountry(state);
-	const {
-		minLat,
-		maxLat,
-		minLong,
-		maxLong
-	} = getCountryCoordinateBounds(state, selectedCountry);
 
-	const zoom = Math.min(180 / (maxLat - minLat), 360 / (maxLong - minLong));
-	const center = [(maxLong - ((maxLong - minLong) /2)),(maxLat - ((maxLat - minLat) / 2))];
+	const center = [getMapCenterLong(state), getMapCenterLat(state)];
+	const zoom = getMapZoom(state);
 
 	const geometry = getWorldGeometry(state);
 	return {
 		center,
 		geometry,
 		selectedCountry,
-		zoom: Math.min(zoom, maxZoom)
+		zoom
 	};
 }
 
 const mapDispatchToProps = dispatch => {
 	return {
-		onClick: (countryName) => dispatch(countrySelectionAction(countryName))
+		onCenterChange: (center) => dispatch(centerChange({long: center[0], lat: center[1]})),
+		onClick: (countryName) => dispatch(countrySelectionAction(countryName)),
+		zoomIn: () => dispatch(zoomInAction()),
+		zoomOut: () => dispatch(zoomOutAction())
 	};
 };
 
-// need to get dimensions of window height and pass into view state
-
 class MapContainer extends Component {
+	componentDidMount() {
+		/*
+		this.gestureDetection = new ZingTouch.Region(this.containerElement, true, false);
+
+		this.gestureDetection.bind(this.containerElement, 'pinch', (event) => {
+			this.props.zoomOut();
+		}, false);
+
+		this.gestureDetection.bind(this.containerElement, 'expand', (event) => {
+			this.props.zoomIn();
+		}, false);
+		*/
+	}
+
+	componentWillUnmount() {
+
+	}
+
 	render() {
 		return (
-			<div className="map-container">
+			<div
+				className="map-container"
+				ref={ (containerElement) => this.containerElement = containerElement }
+			>
 				<MapView
 					center={this.props.center}
 					geometry={this.props.geometry}
+					onCenterChange={this.props.onCenterChange}
 					onClick={this.props.onClick}
 					selectedCountry={this.props.selectedCountry}
 					zoom={this.props.zoom}

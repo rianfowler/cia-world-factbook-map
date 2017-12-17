@@ -4,20 +4,25 @@
   "private": true,
   "dependencies": {
     "express": "^4.16.2",
+    "express-graphql": "^0.6.11",
     "fuzzyset.js": "0.0.4",
+    "graphql": "^0.12.3",
     "lodash": "^4.17.4",
+    "mongoose": "^4.13.7",
     "prop-types": "^15.6.0",
     "react": "^16.2.0",
     "react-addons-css-transition-group": "^15.6.2",
     "react-autosuggest": "^9.3.2",
     "react-dom": "^16.2.0",
+    "react-motion": "^0.5.2",
     "react-redux": "^5.0.6",
     "react-scripts-cssmodules": "^1.0.171",
     "react-simple-maps": "^0.10.1",
     "redux": "^3.7.2",
     "redux-promise-middleware": "^5.0.0",
     "redux-thunk": "^2.2.0",
-    "topojson-client": "^3.0.0"
+    "topojson-client": "^3.0.0",
+    "zingtouch": "^1.0.5"
   },
   "scripts": {
     "start": "react-scripts start",

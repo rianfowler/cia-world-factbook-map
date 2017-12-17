@@ -43,21 +43,20 @@ function renderSuggestion(suggestion) {
 
 class SearchContainer extends Component {
 	render() {
-		// Autosuggest will pass through all these props to the input.
 		const inputProps = {
 			placeholder: 'Country',
 			value: this.props.searchInputValue,
 			onChange: this.props.changeSearchInput,
 			onFocus: () => this.props.changeSearchInput(null, {newValue: ''}),
 			onKeyPress: (event) => {
+				console.log(event.key);
 				if (event.key === "Enter") {
-					this.props.selectCountry(this.props.suggestedCountries[0])
 					event.target.blur();
+					this.props.selectCountry(this.props.suggestedCountries[0])
 				}
 			}
 		};
 
-		//		Finally, render it!
 		return (
 			<Autosuggest
 				suggestions={this.props.suggestedCountries}

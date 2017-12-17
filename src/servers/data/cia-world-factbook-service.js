@@ -5,6 +5,109 @@ const geometryData = require('./world-110m.json');
 const FuzzySet = require('fuzzyset.js');
 const { feature } = require('topojson-client')
 
+const graphql = require('graphql');
+const graphQLHTTP = require('express-graphql');
+const {
+	initializeDatabase,
+	getCountry,
+	getCountriesData
+} = require('./database.js');
+
+initializeDatabase();
+let schema;
+
+getCountriesData().then((countries) => {
+	console.log(`${countries.length} countries retrieved`);
+	/*
+const countrySchema = new Schema({
+	name: String,
+	background: String,
+	geography: {
+		center: {
+			latitude: Number,
+			longitude: Number
+		}
+	}
+});
+*/
+	const CenterType = new graphql.GraphQLObjectType({
+		name: 'center',
+		fields: function() {
+			return {
+				latitude: {
+					type: graphql.GraphQLFloat
+				},
+				longiTude: {
+					type: graphql.GraphQLFloat
+				}
+			}
+		}
+	});
+	const GeographyType = new graphql.GraphQLObjectType({
+		name: 'geography',
+		fields: function() {
+			return {
+				center: {
+					type: CenterType
+				}
+			};
+		}
+	});
+
+	const CountryType = new graphql.GraphQLObjectType({
+		name: 'country',
+		fields: function () {
+			return {
+				name: {
+					type: graphql.GraphQLString
+				},
+				background: {
+					type: graphql.GraphQLString
+				},
+				geography: {
+					type: GeographyType
+				}
+			};
+		}
+	});
+
+	const queryType = new graphql.GraphQLObjectType({
+		name: 'Query',
+		fields: function () {
+			return {
+				countries: {
+					type: new graphql.GraphQLList(CountryType),
+					resolve: async function({name} = {}) {
+						try {
+							let countriesData;
+							if (!name)
+								countriesData = await getCountriesData();
+							else
+								countriesData = await getCountry(name);
+							console.log('graphQL succeeded');
+							return countriesData;
+						} catch (e) {
+							console.log('graphQL failed to retrieve data');
+						}
+					}
+				}
+			};
+		}
+	});
+
+	schema = new graphql.GraphQLSchema({
+		query: queryType
+	});
+
+	// const query = 'query { countries { background, name, ... on geography { ... on center{ latitude } } } }';
+	const query = 'query { countries { name } }';
+
+	graphql.graphql(schema, query).then((result) => {
+		console.log(JSON.stringify(result,null, " "));
+	});
+
+});
+
 const worldFactbookCountries = Object.keys(worldData.countries).map((country) => country.replace(/_/g, " "));
 const worldFuzzy = FuzzySet(worldFactbookCountries);
 let countries = [];
@@ -149,6 +252,8 @@ dataRouter.route('/country/:name/details.json')
 app.set('port', process.env.PORT || 3001);
 
 app.use('/data', dataRouter);
+
+app.use('/graph', graphQLHTTP({schema, pretty: true}));
 
 http.createServer(app).listen(app.get('port'), function() {
 	console.log('Express server listening on port ' + app.get('port'));
